@@ -16,14 +16,16 @@ crawlRouter.post("/", async (req, res) => {
     return res.status(400).json({ error: "Missing 'url' in request body." });
   }
 
+  const normalizedInputUrl = ensureProtocol(url);
+
   try {
-    const crawlResult = await crawlSite(url, {
-      maxDepth: maxDepth ?? 1,
-      maxPages: maxPages ?? 15,
+    const crawlResult = await crawlSite(normalizedInputUrl, {
+      maxDepth: maxDepth ?? 2,
+      maxPages: maxPages ?? 25,
     });
 
     const extractions = extractFromCrawledPages(crawlResult.pages);
-    const knowledgeBase = buildKnowledgeBase(url, extractions);
+    const knowledgeBase = buildKnowledgeBase(normalizedInputUrl, extractions);
 
     return res.json({
       knowledgeBase,
@@ -36,3 +38,15 @@ crawlRouter.post("/", async (req, res) => {
     });
   }
 });
+
+// Accepts bare domains by defaulting to https when no protocol is present.
+function ensureProtocol(rawUrl: string): string {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return trimmed;
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
+}

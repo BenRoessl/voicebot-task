@@ -23,8 +23,8 @@ export interface CrawlResult {
 }
 
 const defaultOptions: CrawlOptions = {
-  maxDepth: 1,
-  maxPages: 15,
+  maxDepth: 2,
+  maxPages: 25,
 };
 
 interface QueueItem {
@@ -135,8 +135,23 @@ function isSameHost(url: string, host: string): boolean {
 function normalizeUrl(url: string): string {
   try {
     const parsed = new URL(url);
+
     parsed.hash = "";
-    if (parsed.pathname === "") parsed.pathname = "/";
+
+    // Normalize hostname for consistent deduplication
+    parsed.hostname = parsed.hostname.toLowerCase();
+
+    // Normalize path: ensure root is "/", remove trailing slash on non-root paths
+    let pathname = parsed.pathname || "/";
+    if (pathname !== "/" && pathname.endsWith("/")) {
+      pathname = pathname.slice(0, -1);
+    }
+
+    parsed.pathname = pathname;
+
+    // Sort query params for stable URLs (?a=1&b=2 vs ?b=2&a=1)
+    parsed.searchParams.sort();
+
     return parsed.toString();
   } catch {
     return url;
