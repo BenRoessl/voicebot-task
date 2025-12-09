@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import { fetchHtml } from "../utils/htmlFetcher";
+import { isUrlTooDeep } from "../utils/urlUtils";
 
 export interface CrawlOptions {
   maxDepth: number;
@@ -62,18 +63,15 @@ export async function crawlSite(
       const html = await fetchHtml(url);
       pages.push({ url, depth, html });
 
-      // Only expand links on levels below maxDepth
       if (depth < finalOptions.maxDepth) {
-        const links = extractLinks(html, url);
+        const links = extractLinks(html, url, finalOptions.maxDepth);
 
         for (const link of links) {
-          // Prevent cross-domain crawling
           if (!isSameHost(link, originHost)) continue;
 
           const normalized = normalizeUrl(link);
 
           if (!visited.has(normalized)) {
-            // BFS queue; ensures predictable crawl order
             queue.push({ url: normalized, depth: depth + 1 });
           }
         }
@@ -90,7 +88,7 @@ export async function crawlSite(
 }
 
 // Extracts all navigable links from the page. Non-HTML targets are filtered out.
-function extractLinks(html: string, baseUrl: string): string[] {
+function extractLinks(html: string, baseUrl: string, maxDepth: number): string[] {
   const $ = cheerio.load(html);
   const links = new Set<string>();
 
@@ -99,18 +97,21 @@ function extractLinks(html: string, baseUrl: string): string[] {
     if (!href) return;
 
     const trimmed = href.trim();
-    if (trimmed.startsWith("#") || trimmed.startsWith("mailto:") || trimmed.startsWith("tel:"))
+    if (trimmed.startsWith("#") || trimmed.startsWith("mailto:") || trimmed.startsWith("tel:")) {
       return;
+    }
 
     try {
       const absolute = new URL(trimmed, baseUrl);
 
       if (absolute.protocol !== "http:" && absolute.protocol !== "https:") return;
 
-      // Removes fragment identifiers for canonical comparison
       const urlWithoutHash = absolute.toString().split("#")[0];
 
-      // Avoid crawling documents and files
+      if (isUrlTooDeep(urlWithoutHash, maxDepth)) {
+        return;
+      }
+
       if (isLikelyFile(urlWithoutHash)) return;
 
       links.add(urlWithoutHash);
@@ -122,7 +123,6 @@ function extractLinks(html: string, baseUrl: string): string[] {
   return Array.from(links);
 }
 
-// Ensures the crawler stays within the same domain
 function isSameHost(url: string, host: string): boolean {
   try {
     return new URL(url).host === host;
@@ -131,17 +131,14 @@ function isSameHost(url: string, host: string): boolean {
   }
 }
 
-// Normalizes URLs for deduplication consistency
 function normalizeUrl(url: string): string {
   try {
     const parsed = new URL(url);
 
     parsed.hash = "";
 
-    // Normalize hostname for consistent deduplication
     parsed.hostname = parsed.hostname.toLowerCase();
 
-    // Normalize path: ensure root is "/", remove trailing slash on non-root paths
     let pathname = parsed.pathname || "/";
     if (pathname !== "/" && pathname.endsWith("/")) {
       pathname = pathname.slice(0, -1);
@@ -149,7 +146,6 @@ function normalizeUrl(url: string): string {
 
     parsed.pathname = pathname;
 
-    // Sort query params for stable URLs (?a=1&b=2 vs ?b=2&a=1)
     parsed.searchParams.sort();
 
     return parsed.toString();
@@ -158,7 +154,6 @@ function normalizeUrl(url: string): string {
   }
 }
 
-// Basic check to avoid loading binary resources during crawl
 function isLikelyFile(url: string): boolean {
   const lower = url.toLowerCase();
   return (
