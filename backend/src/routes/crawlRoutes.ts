@@ -19,7 +19,7 @@ crawlRouter.post("/", async (req, res) => {
   try {
     const crawlResult = await crawlSite(url, {
       maxDepth: maxDepth ?? 1,
-      maxPages: maxPages ?? 15
+      maxPages: maxPages ?? 15,
     });
 
     const extractions = extractFromCrawledPages(crawlResult.pages);
@@ -27,12 +27,12 @@ crawlRouter.post("/", async (req, res) => {
 
     return res.json({
       knowledgeBase,
-      crawlErrors: crawlResult.errors
+      crawlErrors: crawlResult.errors,
     });
   } catch (error) {
     return res.status(500).json({
       error: "Failed to crawl site.",
-      details: error instanceof Error ? error.message : "Unknown error"
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });

@@ -9,6 +9,6 @@ export const agentRouter = Router();
 agentRouter.post("/", async (req, res) => {
   // TODO: später: elevenLabsService.createAgent(...)
   return res.status(501).json({
-    message: "Agent endpoint not implemented yet."
+    message: "Agent endpoint not implemented yet.",
   });
 });

@@ -6,10 +6,7 @@ import {
 } from "../types/knowledgeBase";
 import { PageExtraction } from "./extractionService";
 
-export function buildKnowledgeBase(
-  sourceUrl: string,
-  pages: PageExtraction[]
-): KnowledgeBase {
+export function buildKnowledgeBase(sourceUrl: string, pages: PageExtraction[]): KnowledgeBase {
   const kbPages = pages.map((p) => p.page);
 
   const contact = selectBestContact(pages, sourceUrl);
@@ -65,10 +62,7 @@ function scoreContactUrl(url: string, sourceUrl: string): number {
   try {
     const base = new URL(sourceUrl);
     const current = new URL(url);
-    if (
-      base.origin === current.origin &&
-      (current.pathname === "/" || current.pathname === "")
-    ) {
+    if (base.origin === current.origin && (current.pathname === "/" || current.pathname === "")) {
       score += 1;
     }
   } catch {
@@ -78,9 +72,7 @@ function scoreContactUrl(url: string, sourceUrl: string): number {
   return score;
 }
 
-function mergeOpeningHours(
-  pages: PageExtraction[]
-): KnowledgeBaseOpeningHoursEntry[] {
+function mergeOpeningHours(pages: PageExtraction[]): KnowledgeBaseOpeningHoursEntry[] {
   const entries: KnowledgeBaseOpeningHoursEntry[] = [];
 
   pages.forEach((page) => {
@@ -123,9 +115,7 @@ function mergeServices(pages: PageExtraction[]): KnowledgeBaseServiceItem[] {
 }
 
 function buildRawTextConcat(pages: PageExtraction[]): string | undefined {
-  const parts = pages
-    .map((p) => p.rawText?.trim())
-    .filter((t): t is string => !!t);
+  const parts = pages.map((p) => p.rawText?.trim()).filter((t): t is string => !!t);
 
   if (parts.length === 0) return undefined;
 

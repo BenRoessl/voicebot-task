@@ -17,8 +17,7 @@ function parsePort(value: string | undefined, fallback: number): number {
 export const env: EnvConfig = {
   port: parsePort(process.env.PORT, 4000),
   elevenLabsApiKey: process.env.ELEVENLABS_API_KEY ?? "",
-  elevenLabsApiBase:
-    process.env.ELEVENLABS_API_BASE ?? "https://api.elevenlabs.io",
+  elevenLabsApiBase: process.env.ELEVENLABS_API_BASE ?? "https://api.elevenlabs.io",
   corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
 };
 

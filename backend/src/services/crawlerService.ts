@@ -99,18 +99,13 @@ function extractLinks(html: string, baseUrl: string): string[] {
     if (!href) return;
 
     const trimmed = href.trim();
-    if (
-      trimmed.startsWith("#") ||
-      trimmed.startsWith("mailto:") ||
-      trimmed.startsWith("tel:")
-    )
+    if (trimmed.startsWith("#") || trimmed.startsWith("mailto:") || trimmed.startsWith("tel:"))
       return;
 
     try {
       const absolute = new URL(trimmed, baseUrl);
 
-      if (absolute.protocol !== "http:" && absolute.protocol !== "https:")
-        return;
+      if (absolute.protocol !== "http:" && absolute.protocol !== "https:") return;
 
       // Removes fragment identifiers for canonical comparison
       const urlWithoutHash = absolute.toString().split("#")[0];
