@@ -1,14 +1,26 @@
 import { Router } from "express";
+import { KnowledgeBase } from "../types/knowledgeBase";
+import { buildSystemPrompt } from "../services/promptServices";
 
 export const promptRouter = Router();
 
-/**
- * POST /api/prompt
- * Body: { knowledgeBase: any }
- */
 promptRouter.post("/", async (req, res) => {
-  // TODO: später: promptService.generatePrompt(knowledgeBase)
-  return res.status(501).json({
-    message: "Prompt endpoint not implemented yet.",
-  });
+  const { knowledgeBase } = req.body as { knowledgeBase?: KnowledgeBase };
+
+  if (!knowledgeBase) {
+    return res.status(400).json({ error: "Missing 'knowledgeBase' in request body." });
+  }
+
+  try {
+    const result = buildSystemPrompt(knowledgeBase);
+
+    return res.json({
+      prompt: result.prompt,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Failed to build system prompt.",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
 });

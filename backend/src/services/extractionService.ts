@@ -15,9 +15,7 @@ export interface PageExtraction {
   rawText?: string;
 }
 
-export function extractFromCrawledPages(
-  pages: CrawledPage[]
-): PageExtraction[] {
+export function extractFromCrawledPages(pages: CrawledPage[]): PageExtraction[] {
   return pages.map(extractFromCrawledPage);
 }
 
@@ -28,9 +26,7 @@ export function extractFromCrawledPage(page: CrawledPage): PageExtraction {
 
   const mainText = extractMainText($);
   const mainTextSnippet =
-    mainText.length > 800
-      ? `${mainText.slice(0, 800).trim()}…`
-      : mainText || undefined;
+    mainText.length > 800 ? `${mainText.slice(0, 800).trim()}…` : mainText || undefined;
 
   const rawText = extractBodyText($);
 
@@ -55,13 +51,7 @@ export function extractFromCrawledPage(page: CrawledPage): PageExtraction {
 
 // Prefer main/article/content containers over full body text.
 function extractMainText($: cheerio.CheerioAPI): string {
-  const candidates = [
-    "main",
-    "article",
-    "#content",
-    ".content",
-    ".main-content",
-  ];
+  const candidates = ["main", "article", "#content", ".content", ".main-content"];
 
   for (const selector of candidates) {
     const el = $(selector);
@@ -81,10 +71,7 @@ function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
-function extractContact(
-  rawText: string,
-  pageUrl: string
-): KnowledgeBaseContact {
+function extractContact(rawText: string, pageUrl: string): KnowledgeBaseContact {
   const contact: KnowledgeBaseContact = {};
 
   const emailMatch = rawText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
@@ -92,9 +79,7 @@ function extractContact(
     contact.email = emailMatch[0];
   }
 
-  const phoneMatch = rawText.match(
-    /(\+?\d{2,4}[\s\/-]?)?(\(?\d{2,5}\)?[\s\/-]?){1,4}\d{2,5}/
-  );
+  const phoneMatch = rawText.match(/(\+?\d{2,4}[\s\/-]?)?(\(?\d{2,5}\)?[\s\/-]?){1,4}\d{2,5}/);
   if (phoneMatch) {
     contact.phone = phoneMatch[0];
   }
@@ -119,9 +104,7 @@ function getOrigin(url: string): string | undefined {
   }
 }
 
-function extractOpeningHours(
-  rawText: string
-): KnowledgeBaseOpeningHoursEntry[] {
+function extractOpeningHours(rawText: string): KnowledgeBaseOpeningHoursEntry[] {
   const lines = rawText
     .split(/[\r\n]+/)
     .map((l) => l.trim())
@@ -150,9 +133,7 @@ function extractOpeningHours(
     const hasDay = days.some((d) => line.includes(d));
     if (!hasDay) continue;
 
-    const timeMatch = line.match(
-      /([0-2]?\d:[0-5]\d)\s*[–-]\s*([0-2]?\d:[0-5]\d)/
-    );
+    const timeMatch = line.match(/([0-2]?\d:[0-5]\d)\s*[–-]\s*([0-2]?\d:[0-5]\d)/);
     if (!timeMatch) continue;
 
     const [from, to] = [timeMatch[1], timeMatch[2]];
@@ -174,22 +155,12 @@ function extractServices($: cheerio.CheerioAPI): KnowledgeBaseServiceItem[] {
 
   const headingSelectors = ["h1", "h2", "h3", "h4"];
 
-  const keywords = [
-    "Leistungen",
-    "Service",
-    "Services",
-    "Angebote",
-    "Produkte",
-  ];
+  const keywords = ["Leistungen", "Service", "Services", "Angebote", "Produkte"];
 
   headingSelectors.forEach((selector) => {
     $(selector).each((_idx, el) => {
       const headingText = normalizeWhitespace($(el).text());
-      if (
-        !keywords.some((k) =>
-          headingText.toLowerCase().includes(k.toLowerCase())
-        )
-      ) {
+      if (!keywords.some((k) => headingText.toLowerCase().includes(k.toLowerCase()))) {
         return;
       }
 
