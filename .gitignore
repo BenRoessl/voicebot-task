@@ -4,6 +4,9 @@ dist/
 .env
 .env.*
 !.env.example
+tmp/
+tmp/knowledge-base/
+
 
 # Frontend builds
 frontend/dist/

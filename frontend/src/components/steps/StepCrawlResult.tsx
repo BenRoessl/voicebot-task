@@ -5,7 +5,7 @@ import type { KnowledgeBase } from "../../types/knowledgeBase";
 interface Props {
   url: string;
   knowledgeBase: KnowledgeBase | null;
-  onCrawlComplete: (knowledgeBase: KnowledgeBase) => void;
+  onCrawlComplete: (kb: KnowledgeBase, tempFilePath: string) => void;
   onNext: () => void;
 }
 
@@ -20,12 +20,13 @@ export function StepCrawlResult({ url, knowledgeBase, onCrawlComplete, onNext }:
 
       const response = await apiPost<{
         knowledgeBase: KnowledgeBase;
+        knowledgeBaseJsonFilePath: string; // <- wichtig: muss zum Backend passen
         crawlErrors: unknown[];
       }>("/api/crawl", { url });
 
-      onCrawlComplete(response.knowledgeBase);
+      onCrawlComplete(response.knowledgeBase, response.knowledgeBaseJsonFilePath);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (err) {
+    } catch (_err) {
       setError("Crawling failed. Please check the URL or try again.");
     } finally {
       setLoading(false);
