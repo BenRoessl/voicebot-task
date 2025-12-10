@@ -1,10 +1,10 @@
 import express from "express";
 import cors from "cors";
-import { env } from "./routes/config/env";
+import { env } from "./config/env";
 import { logger } from "./utils/logger";
 import { crawlRouter } from "./routes/crawlRoutes";
 import { promptRouter } from "./routes/promptRoutes";
-import { agentRouter } from "./routes/agentRoutes";
+import { elevenLabsAgentRouter } from "./routes/elevenLabsAgentRoutes";
 
 const app = express();
 
@@ -28,7 +28,7 @@ app.get("/health", (_req, response) => {
 
 app.use("/api/crawl", crawlRouter);
 app.use("/api/prompt", promptRouter);
-app.use("/api/agents", agentRouter);
+app.use("/api/agents", elevenLabsAgentRouter);
 
 app.use((_req, response) => {
   response.status(404).json({ error: "Not found" });

@@ -26,6 +26,7 @@ export interface ExtractionPageSummary {
   url: string;
   title?: string;
   preview?: string;
+  fullText?: string;
 }
 
 export interface ExtractionResult {
@@ -33,20 +34,18 @@ export interface ExtractionResult {
   contact: ContactInfo | null;
   openingHours: OpeningHoursEntry[];
   services: ServiceEntry[];
-  rawTextConcat: string;
 }
 
 // Public API used by crawlRoutes
 export function extractFromCrawledPages(pages: CrawledPage[]): ExtractionResult {
   const structured = extractStructuredFromPages(pages);
-  const { pageSummaries, rawTextConcat } = extractRawTextFromPages(pages);
+  const { pageSummaries } = extractRawTextFromPages(pages);
 
   return {
     pages: pageSummaries,
     contact: structured.contact,
     openingHours: structured.openingHours,
     services: structured.services,
-    rawTextConcat,
   };
 }
 
@@ -276,42 +275,54 @@ function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation
 
 interface RawTextResult {
   pageSummaries: ExtractionPageSummary[];
-  rawTextConcat: string;
 }
 
 function extractRawTextFromPages(pages: CrawledPage[]): RawTextResult {
-  const MAX_TOTAL_CHARS = 60_000;
-  const MAX_PER_PAGE_CHARS = 5_000;
-
-  let total = 0;
-  const pageTexts: string[] = [];
   const pageSummaries: ExtractionPageSummary[] = [];
 
   for (const page of pages) {
     const $ = sanitizeHtml(page.html);
     const lines = extractReadableText($);
+
     if (lines.length === 0) continue;
 
     const title = normalizeText($("title").first().text() || "");
 
+    // 2) PREVIEW: erster sinnvoller Satz/Bereich (wie gehabt)
+    let previewStartIndex = lines.findIndex((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return false;
+      if (trimmed.length < 20) return false;
+      if (/[.!?]/.test(trimmed)) return true;
+      return trimmed.length > 40;
+    });
+
+    if (previewStartIndex === -1) {
+      previewStartIndex = 0;
+    }
+
+    // preview = kleine Vorschau (6 Zeilen)
+    const previewLines = lines.slice(previewStartIndex, previewStartIndex + 6);
+    let preview = previewLines.join(" ");
+    preview = preview.replace(/\s+/g, " ").trim();
+
+    // full text soll an der gleichen Stelle beginnen wie preview
+    const fullTextLines = lines.slice(previewStartIndex);
+
+    // kompletter Text ohne Sonderzeichen / neue Zeilen
+    let fullText = fullTextLines.join(" ");
+    fullText = fullText.replace(/\s+/g, " ").trim();
+
+    // 3) Ergebnis speichern
     pageSummaries.push({
       url: page.url,
       title: title || undefined,
-      preview: lines.slice(0, 6).join(" "),
+      preview,
+      fullText,
     });
-
-    const text = lines.join("\n");
-    const trimmed = text.slice(0, MAX_PER_PAGE_CHARS);
-    if (!trimmed) continue;
-
-    if (total + trimmed.length > MAX_TOTAL_CHARS) break;
-
-    pageTexts.push(trimmed);
-    total += trimmed.length;
   }
 
   return {
     pageSummaries,
-    rawTextConcat: pageTexts.join("\n\n"),
   };
 }

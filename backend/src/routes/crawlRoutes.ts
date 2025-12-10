@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { crawlSite } from "../services/crawlerService";
+import { CrawledPage, crawlSite } from "../services/crawlerService";
 import { crawlUsingSitemap } from "../services/sitemapService";
 import { extractFromCrawledPages } from "../services/extractionService";
 import { buildKnowledgeBase } from "../services/knowledgeBaseService";
+import { writeKnowledgeBaseJsonFile } from "../services/knowledgeBaseExporter";
 
 export const crawlRouter = Router();
 
@@ -48,8 +49,12 @@ crawlRouter.post("/", async (req, res) => {
     const extraction = extractFromCrawledPages(mergedPages);
     const knowledgeBase = buildKnowledgeBase(normalizedInputUrl, extraction);
 
+    // NEW: JSON speichern
+    const knowledgeBaseJsonFilePath = await writeKnowledgeBaseJsonFile(knowledgeBase);
+
     return res.json({
       knowledgeBase,
+      knowledgeBaseJsonFilePath,
       crawlErrors: mergedErrors,
     });
   } catch (error) {
@@ -70,8 +75,6 @@ function ensureProtocol(rawUrl: string): string {
 
   return `https://${trimmed}`;
 }
-
-import type { CrawledPage } from "../services/crawlerService";
 
 function mergeCrawlPages(
   sitemapPages: CrawledPage[],
