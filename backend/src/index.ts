@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { env } from "./config/env";
+import { env } from "./routes/config/env";
 import { logger } from "./utils/logger";
 import { crawlRouter } from "./routes/crawlRoutes";
 import { promptRouter } from "./routes/promptRoutes";
@@ -8,11 +8,16 @@ import { agentRouter } from "./routes/agentRoutes";
 
 const app = express();
 
-app.use(express.json());
+// Allow larger JSON payloads for knowledge base + prompt building
+app.use(
+  express.json({
+    limit: "1mb",
+  })
+);
 
 app.use(
   cors({
-    origin: env.corsOrigin,
+    origin: env.corsOrigin || true,
     credentials: false,
   })
 );

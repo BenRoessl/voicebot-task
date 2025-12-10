@@ -1,202 +1,317 @@
-import * as cheerio from "cheerio";
-import { CrawledPage } from "./crawlerService";
-import {
-  KnowledgeBasePage,
-  KnowledgeBaseContact,
-  KnowledgeBaseOpeningHoursEntry,
-  KnowledgeBaseServiceItem,
-} from "../types/knowledgeBase";
+import type { CrawledPage } from "./crawlerService";
+import { sanitizeHtml, extractReadableText, normalizeText } from "../utils/textSanitizer";
 
-export interface PageExtraction {
-  page: KnowledgeBasePage;
-  contact?: KnowledgeBaseContact;
-  openingHours?: KnowledgeBaseOpeningHoursEntry[];
-  services?: KnowledgeBaseServiceItem[];
-  rawText?: string;
+export interface ContactInfo {
+  nameOrCompany?: string;
+  streetAddress?: string;
+  postalCode?: string;
+  city?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
 }
 
-export function extractFromCrawledPages(pages: CrawledPage[]): PageExtraction[] {
-  return pages.map(extractFromCrawledPage);
+export interface OpeningHoursEntry {
+  day: string;
+  opens: string;
+  closes: string;
 }
 
-export function extractFromCrawledPage(page: CrawledPage): PageExtraction {
-  const $ = cheerio.load(page.html);
+export interface ServiceEntry {
+  name: string;
+  description?: string;
+}
 
-  const title = $("title").first().text().trim() || undefined;
+export interface ExtractionPageSummary {
+  url: string;
+  title?: string;
+  preview?: string;
+}
 
-  const mainText = extractMainText($);
-  const mainTextSnippet =
-    mainText.length > 800 ? `${mainText.slice(0, 800).trim()}…` : mainText || undefined;
+export interface ExtractionResult {
+  pages: ExtractionPageSummary[];
+  contact: ContactInfo | null;
+  openingHours: OpeningHoursEntry[];
+  services: ServiceEntry[];
+  rawTextConcat: string;
+}
 
-  const rawText = extractBodyText($);
-
-  const contact = extractContact(rawText, page.url);
-  const openingHours = extractOpeningHours(rawText);
-  const services = extractServices($);
-
-  const kbPage: KnowledgeBasePage = {
-    url: page.url,
-    title,
-    mainTextSnippet,
-  };
+// Public API used by crawlRoutes
+export function extractFromCrawledPages(pages: CrawledPage[]): ExtractionResult {
+  const structured = extractStructuredFromPages(pages);
+  const { pageSummaries, rawTextConcat } = extractRawTextFromPages(pages);
 
   return {
-    page: kbPage,
-    contact: isEmptyContact(contact) ? undefined : contact,
-    openingHours: openingHours.length > 0 ? openingHours : undefined,
-    services: services.length > 0 ? services : undefined,
-    rawText: rawText || undefined,
+    pages: pageSummaries,
+    contact: structured.contact,
+    openingHours: structured.openingHours,
+    services: structured.services,
+    rawTextConcat,
   };
 }
 
-// Prefer main/article/content containers over full body text.
-function extractMainText($: cheerio.CheerioAPI): string {
-  const candidates = ["main", "article", "#content", ".content", ".main-content"];
+// ----------------- structured extraction -----------------
 
-  for (const selector of candidates) {
-    const el = $(selector);
-    if (el.length > 0) {
-      return normalizeWhitespace(el.text());
-    }
-  }
-
-  return normalizeWhitespace($("body").text());
+interface StructuredAggregation {
+  contact: ContactInfo | null;
+  openingHours: OpeningHoursEntry[];
+  services: ServiceEntry[];
 }
 
-function extractBodyText($: cheerio.CheerioAPI): string {
-  return normalizeWhitespace($("body").text());
-}
+function looksLikeCompanyName(candidate: string): boolean {
+  const value = candidate.trim();
+  const lower = value.toLowerCase();
 
-function normalizeWhitespace(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
-}
+  if (value.length < 3 || value.length > 80) return false;
 
-function extractContact(rawText: string, pageUrl: string): KnowledgeBaseContact {
-  const contact: KnowledgeBaseContact = {};
-
-  const emailMatch = rawText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  if (emailMatch) {
-    contact.email = emailMatch[0];
-  }
-
-  const phoneMatch = rawText.match(/(\+?\d{2,4}[\s\/-]?)?(\(?\d{2,5}\)?[\s\/-]?){1,4}\d{2,5}/);
-  if (phoneMatch) {
-    contact.phone = phoneMatch[0];
-  }
-
-  const postalCityMatch = rawText.match(/(\d{4,5})\s+([A-ZÄÖÜa-zäöüß\- ]{2,})/);
-  if (postalCityMatch) {
-    contact.postalCode = postalCityMatch[1];
-    contact.city = postalCityMatch[2].trim();
-  }
-
-  contact.website = getOrigin(pageUrl);
-
-  return contact;
-}
-
-function getOrigin(url: string): string | undefined {
-  try {
-    const parsed = new URL(url);
-    return `${parsed.protocol}//${parsed.host}`;
-  } catch {
-    return undefined;
-  }
-}
-
-function extractOpeningHours(rawText: string): KnowledgeBaseOpeningHoursEntry[] {
-  const lines = rawText
-    .split(/[\r\n]+/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  const days = [
-    "Montag",
-    "Dienstag",
-    "Mittwoch",
-    "Donnerstag",
-    "Freitag",
-    "Samstag",
-    "Sonntag",
-    "Mo",
-    "Di",
-    "Mi",
-    "Do",
-    "Fr",
-    "Sa",
-    "So",
+  const forbiddenExact = [
+    "unsere bestseller",
+    "bestseller",
+    "kontakt",
+    "impressum",
+    "jobs",
+    "karriere",
+    "newsletter",
+    "standorte",
+    "standort",
+    "faq",
+    "häufige fragen",
+    "impressum & datenschutz",
+    "datenschutz",
+    "nutzungsbedingungen",
+    "agb",
+    "rechtliche hinweise",
   ];
 
-  const entries: KnowledgeBaseOpeningHoursEntry[] = [];
+  if (forbiddenExact.includes(lower)) return false;
 
-  for (const line of lines) {
-    const hasDay = days.some((d) => line.includes(d));
-    if (!hasDay) continue;
-
-    const timeMatch = line.match(/([0-2]?\d:[0-5]\d)\s*[–-]\s*([0-2]?\d:[0-5]\d)/);
-    if (!timeMatch) continue;
-
-    const [from, to] = [timeMatch[1], timeMatch[2]];
-    const dayLabel = days.find((d) => line.includes(d)) ?? "Unknown";
-
-    entries.push({
-      day: dayLabel,
-      opens: from,
-      closes: to,
-      raw: line,
-    });
-  }
-
-  return entries;
+  return true;
 }
 
-function extractServices($: cheerio.CheerioAPI): KnowledgeBaseServiceItem[] {
-  const items: KnowledgeBaseServiceItem[] = [];
+function extractEmailFromText(text: string): string | undefined {
+  const tokens = text.split(/\s+/);
+  const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
-  const headingSelectors = ["h1", "h2", "h3", "h4"];
-
-  const keywords = ["Leistungen", "Service", "Services", "Angebote", "Produkte"];
-
-  headingSelectors.forEach((selector) => {
-    $(selector).each((_idx, el) => {
-      const headingText = normalizeWhitespace($(el).text());
-      if (!keywords.some((k) => headingText.toLowerCase().includes(k.toLowerCase()))) {
-        return;
-      }
-
-      const nextList = $(el).nextAll("ul").first();
-      if (nextList.length === 0) return;
-
-      nextList.find("li").each((_liIdx, li) => {
-        const text = normalizeWhitespace($(li).text());
-        if (!text) return;
-
-        items.push({
-          name: text,
-        });
-      });
-    });
-  });
-
-  const unique = new Map<string, KnowledgeBaseServiceItem>();
-  for (const item of items) {
-    if (!unique.has(item.name)) {
-      unique.set(item.name, item);
+  for (const token of tokens) {
+    const cleaned = token.replace(/[(),;:<>"]+/g, "");
+    if (emailRegex.test(cleaned)) {
+      return cleaned;
     }
   }
 
-  return Array.from(unique.values());
+  return undefined;
 }
 
-function isEmptyContact(contact: KnowledgeBaseContact): boolean {
-  return !(
-    contact.email ||
-    contact.phone ||
-    contact.streetAddress ||
-    contact.postalCode ||
-    contact.city ||
-    contact.country ||
-    contact.nameOrCompany ||
-    contact.website
-  );
+function extractPhoneFromText(text: string): string | undefined {
+  const candidates = text.match(/\+?[0-9][0-9\s\/()-]{5,}/g);
+  if (!candidates) return undefined;
+
+  for (const raw of candidates) {
+    const clean = raw.trim();
+
+    if (/^\d{4,6}$/.test(clean)) continue; // 2025 / 123456 / 84051 etc.
+
+    if (/\d\.\d/.test(clean)) continue;
+
+    const looksLikePhone =
+      /^(\+|00)?\d{2,3}/.test(clean) || // +49..., 0049..., 087...
+      /\d{2,}\s*\/\s*\d{2,}/.test(clean) || // 0871/12345
+      /\d{2,}\s*-\s*\d{2,}/.test(clean) || // 0871-12345
+      /\(\d{2,}\)/.test(clean); // (0871)
+
+    if (!looksLikePhone) continue;
+
+    const digitCount = clean.replace(/\D/g, "").length;
+    if (digitCount < 6) continue;
+
+    return clean;
+  }
+
+  return undefined;
+}
+
+function extractOpeningHoursFromLines(lines: string[]): OpeningHoursEntry[] {
+  const result: OpeningHoursEntry[] = [];
+
+  for (const line of lines) {
+    // Only reasonably short lines, otherwise it is most likely description text
+    if (line.length > 120) continue;
+
+    const hasDay = /(mo|di|mi|do|fr|sa|so|mon|tue|wed|thu|fri|sat|sun)\b/i.test(line);
+    const hasTime = /\b\d{1,2}:\d{2}\b/.test(line); // 09:00, 8:30 etc.
+
+    if (!hasDay || !hasTime) continue;
+
+    result.push({
+      day: line,
+      opens: "",
+      closes: "",
+    });
+  }
+
+  return result;
+}
+
+function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation {
+  const aggregatedContact: ContactInfo = {};
+  const openingHours: OpeningHoursEntry[] = [];
+  const services: ServiceEntry[] = [];
+
+  for (const page of pages) {
+    const $ = sanitizeHtml(page.html);
+    const bodyText = $("body").text();
+
+    // E-mail: prefer mailto links, fallback to regex
+    if (!aggregatedContact.email) {
+      const mailHref = $("a[href^='mailto:']").first().attr("href");
+      if (mailHref) {
+        const value = mailHref.replace(/^mailto:/i, "").trim();
+        aggregatedContact.email = value || undefined;
+      }
+
+      if (!aggregatedContact.email) {
+        const emailFromBody = extractEmailFromText(bodyText);
+        if (emailFromBody) aggregatedContact.email = emailFromBody;
+      }
+    }
+
+    // Phone: prefer tel links, fallback to loose pattern, but ignore garbage like "0"
+    if (!aggregatedContact.phone) {
+      const telHref = $("a[href^='tel:']").first().attr("href");
+      if (telHref) {
+        const raw = telHref.replace(/^tel:/i, "").trim();
+        const digits = raw.replace(/[^\d+]/g, "");
+        if (digits.length >= 5) {
+          aggregatedContact.phone = raw;
+        }
+      }
+
+      if (!aggregatedContact.phone) {
+        const phoneFromBody = extractPhoneFromText(bodyText);
+        if (phoneFromBody) aggregatedContact.phone = phoneFromBody;
+      }
+    }
+
+    // Website: if nothing found yet, use first absolute link;
+    if (!aggregatedContact.website) {
+      const sameHostLink = $("a[href]")
+        .map((_i, el) => $(el).attr("href"))
+        .get()
+        .find((href) => href && href.startsWith("http"));
+      if (sameHostLink) {
+        aggregatedContact.website = sameHostLink;
+      }
+    }
+
+    // Very simple address heuristic: line with 5-digit postal code
+    if (
+      !aggregatedContact.streetAddress ||
+      !aggregatedContact.city ||
+      !aggregatedContact.postalCode
+    ) {
+      const lines = bodyText
+        .split("\n")
+        .map((l) => normalizeText(l))
+        .filter(Boolean);
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const zipMatch = line.match(/\b\d{5}\b/);
+        if (!zipMatch) continue;
+        if (line.length > 120) continue;
+
+        const zip = zipMatch[0];
+        aggregatedContact.postalCode = zip;
+
+        // City: part after ZIP, bis zum nächsten Komma
+        const afterZip = line.slice(line.indexOf(zip) + zip.length).trim();
+        const cityPart = afterZip.split(",")[0].trim();
+        if (cityPart) {
+          aggregatedContact.city = cityPart;
+        }
+
+        // Street: vorherige sinnvolle Zeile suchen
+        for (let j = i - 1; j >= 0; j--) {
+          const prev = lines[j];
+          if (!prev) continue;
+          if (/impressum|nutzungsbedingungen|agb/i.test(prev)) continue;
+          if (prev.length < 5 || prev.length > 120) continue;
+
+          aggregatedContact.streetAddress = prev;
+          break;
+        }
+
+        break;
+      }
+
+      // Opening hours (new, more strict)
+      const opening = extractOpeningHoursFromLines(lines);
+      if (opening.length > 0) {
+        openingHours.push(...opening);
+      }
+    }
+
+    if (!aggregatedContact.nameOrCompany) {
+      const candidate = $("h1, h2")
+        .map((_i, el) => $(el).text())
+        .get()
+        .map((t) => normalizeText(t))
+        .find((t) => looksLikeCompanyName(t));
+
+      if (candidate) {
+        aggregatedContact.nameOrCompany = candidate;
+      }
+    }
+  }
+
+  const contact = Object.values(aggregatedContact).some((v) => !!v) ? aggregatedContact : null;
+
+  return {
+    contact,
+    openingHours,
+    services,
+  };
+}
+// ----------------- unstructured text extraction -----------------
+
+interface RawTextResult {
+  pageSummaries: ExtractionPageSummary[];
+  rawTextConcat: string;
+}
+
+function extractRawTextFromPages(pages: CrawledPage[]): RawTextResult {
+  const MAX_TOTAL_CHARS = 60_000;
+  const MAX_PER_PAGE_CHARS = 5_000;
+
+  let total = 0;
+  const pageTexts: string[] = [];
+  const pageSummaries: ExtractionPageSummary[] = [];
+
+  for (const page of pages) {
+    const $ = sanitizeHtml(page.html);
+    const lines = extractReadableText($);
+    if (lines.length === 0) continue;
+
+    const title = normalizeText($("title").first().text() || "");
+
+    pageSummaries.push({
+      url: page.url,
+      title: title || undefined,
+      preview: lines.slice(0, 6).join(" "),
+    });
+
+    const text = lines.join("\n");
+    const trimmed = text.slice(0, MAX_PER_PAGE_CHARS);
+    if (!trimmed) continue;
+
+    if (total + trimmed.length > MAX_TOTAL_CHARS) break;
+
+    pageTexts.push(trimmed);
+    total += trimmed.length;
+  }
+
+  return {
+    pageSummaries,
+    rawTextConcat: pageTexts.join("\n\n"),
+  };
 }

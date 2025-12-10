@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { KnowledgeBase } from "../types/knowledgeBase";
-import { buildSystemPrompt } from "../services/promptServices";
+import { buildSystemPrompt } from "../services/promptService";
 
 export const promptRouter = Router();
 

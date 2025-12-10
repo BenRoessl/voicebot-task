@@ -1,4 +1,4 @@
-import { KnowledgeBase } from "../types/knowledgeBase";
+import type { KnowledgeBase } from "../types/knowledgeBase";
 
 export interface PromptBuildResult {
   prompt: string;
