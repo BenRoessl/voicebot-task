@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { crawlSite, type CrawledPage, type CrawlError } from "../services/crawlerService";
+import { crawlSite } from "../services/crawlerService";
+import { crawlUsingSitemap } from "../services/sitemapService";
 import { extractFromCrawledPages } from "../services/extractionService";
 import { buildKnowledgeBase } from "../services/knowledgeBaseService";
-import { crawlUsingSitemap } from "../services/sitemapService";
 
 export const crawlRouter = Router();
 
@@ -22,26 +22,31 @@ crawlRouter.post("/", async (req, res) => {
   const pagesLimit = maxPages ?? 25;
 
   try {
-    const sitemapResult = await crawlUsingSitemap(normalizedInputUrl, {
-      maxDepth: depth,
-      maxPages: pagesLimit,
-    });
+    // Run sitemap and HTML crawl; HTML crawl ensures coverage if sitemap is incomplete.
+    const [sitemapResult, htmlResult] = await Promise.all([
+      crawlUsingSitemap(normalizedInputUrl, {
+        maxDepth: depth,
+        maxPages: pagesLimit,
+      }),
+      crawlSite(normalizedInputUrl, {
+        maxDepth: depth,
+        maxPages: pagesLimit,
+      }),
+    ]);
 
-    const htmlResult = await crawlSite(normalizedInputUrl, {
-      maxDepth: depth,
-      maxPages: pagesLimit,
-    });
+    const mergedPages = mergeCrawlPages(sitemapResult.pages, htmlResult.pages, pagesLimit);
 
-    const { pages: mergedPages, errors: mergedErrors } = mergeCrawlResults(
-      sitemapResult.pages,
-      htmlResult.pages,
-      sitemapResult.errors,
-      htmlResult.errors,
-      pagesLimit
-    );
+    const mergedErrors = [...sitemapResult.errors, ...htmlResult.errors];
 
-    const extractions = extractFromCrawledPages(mergedPages);
-    const knowledgeBase = buildKnowledgeBase(normalizedInputUrl, extractions);
+    if (mergedPages.length === 0) {
+      return res.status(502).json({
+        error: "No pages could be crawled.",
+        crawlErrors: mergedErrors,
+      });
+    }
+
+    const extraction = extractFromCrawledPages(mergedPages);
+    const knowledgeBase = buildKnowledgeBase(normalizedInputUrl, extraction);
 
     return res.json({
       knowledgeBase,
@@ -55,30 +60,6 @@ crawlRouter.post("/", async (req, res) => {
   }
 });
 
-function mergeCrawlResults(
-  sitemapPages: CrawledPage[],
-  htmlPages: CrawledPage[],
-  sitemapErrors: CrawlError[],
-  htmlErrors: CrawlError[],
-  pagesLimit: number
-): { pages: CrawledPage[]; errors: CrawlError[] } {
-  const mergedErrors: CrawlError[] = [...sitemapErrors, ...htmlErrors];
-
-  const pages: CrawledPage[] = [];
-  const seen = new Set<string>();
-
-  for (const page of [...sitemapPages, ...htmlPages]) {
-    if (pages.length >= pagesLimit) break;
-    if (seen.has(page.url)) continue;
-
-    seen.add(page.url);
-    pages.push(page);
-  }
-
-  return { pages, errors: mergedErrors };
-}
-
-// Accepts bare domains by defaulting to https when no protocol is present.
 function ensureProtocol(rawUrl: string): string {
   const trimmed = rawUrl.trim();
   if (!trimmed) return trimmed;
@@ -88,4 +69,44 @@ function ensureProtocol(rawUrl: string): string {
   }
 
   return `https://${trimmed}`;
+}
+
+import type { CrawledPage } from "../services/crawlerService";
+
+function mergeCrawlPages(
+  sitemapPages: CrawledPage[],
+  htmlPages: CrawledPage[],
+  maxPages: number
+): CrawledPage[] {
+  const byUrl = new Map<string, CrawledPage>();
+
+  const all = [...sitemapPages, ...htmlPages];
+
+  for (const page of all) {
+    const key = normalizeUrlForKey(page.url);
+    if (!byUrl.has(key)) {
+      byUrl.set(key, page);
+    }
+  }
+
+  return Array.from(byUrl.values()).slice(0, maxPages);
+}
+
+function normalizeUrlForKey(url: string): string {
+  try {
+    const u = new URL(url);
+    u.hash = "";
+
+    let pathname = u.pathname || "/";
+    if (pathname !== "/" && pathname.endsWith("/")) {
+      pathname = pathname.slice(0, -1);
+    }
+    u.pathname = pathname;
+
+    u.searchParams.sort();
+
+    return u.toString();
+  } catch {
+    return url;
+  }
 }

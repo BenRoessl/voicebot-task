@@ -2,11 +2,13 @@ import { useState } from "react";
 import type { KnowledgeBase } from "../types/knowledgeBase";
 import { StepUrl } from "./steps/StepUrl";
 import { StepCrawlResult } from "./steps/StepCrawlResult";
+import { StepPrompt } from "./steps/StepPrompt";
 
 export function Wizard() {
   const [step, setStep] = useState(1);
   const [url, setUrl] = useState("");
   const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBase | null>(null);
+  const [systemPrompt, setSystemPrompt] = useState<string>("");
 
   function goToNextStep() {
     setStep((current) => current + 1);
@@ -28,9 +30,20 @@ export function Wizard() {
         />
       )}
 
-      {step > 2 && (
-        <div style={{ marginTop: "2rem" }}>
-          <p>Further steps will be implemented later.</p>
+      {step === 3 && (
+        <StepPrompt
+          knowledgeBase={knowledgeBase}
+          prompt={systemPrompt}
+          onChangePrompt={setSystemPrompt}
+          onNext={goToNextStep}
+        />
+      )}
+
+      {step >= 4 && (
+        <div style={{ padding: "1rem" }}>
+          <h2>Schritt 4: Agent-Erstellung</h2>
+          <p>Hier binden wir als Nächstes die ElevenLabs-API an.</p>
+          <pre>{systemPrompt}</pre>
         </div>
       )}
     </div>

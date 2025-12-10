@@ -30,7 +30,7 @@ export interface KnowledgeBaseServiceItem {
 export interface KnowledgeBase {
   sourceUrl: string;
   pages: KnowledgeBasePage[];
-  contact?: KnowledgeBaseContact;
+  contact?: KnowledgeBaseContact | null;
   openingHours?: KnowledgeBaseOpeningHoursEntry[];
   services?: KnowledgeBaseServiceItem[];
   rawTextConcat?: string;
