@@ -9,7 +9,7 @@ export const elevenLabsAgentRouter = Router();
 interface CreateAgentRequestBody {
   name?: string;
   prompt?: string;
-  knowledgeBaseTempFilePath?: string;  // → das ist der JSON-Pfad
+  knowledgeBaseTempFilePath?: string; // → das ist der JSON-Pfad
 }
 
 elevenLabsAgentRouter.post("/", async (req, res) => {

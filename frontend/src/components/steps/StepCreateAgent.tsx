@@ -60,7 +60,10 @@ export function StepCreateAgent({
   return (
     <div>
       <h2>Schritt 4: Agent-Erstellung</h2>
-      <p>Knowledge Base und Prompt werden nun an ElevenLabs geschickt, um einen Voice-Agent anzulegen.</p>
+      <p>
+        Knowledge Base und Prompt werden nun an ElevenLabs geschickt, um einen Voice-Agent
+        anzulegen.
+      </p>
 
       {!agentId && (
         <button onClick={handleCreate} disabled={loading}>
@@ -71,7 +74,9 @@ export function StepCreateAgent({
       {agentId && (
         <div style={{ marginTop: "1rem" }}>
           <p>Agent wurde erfolgreich erstellt.</p>
-          <p><strong>Agent-ID:</strong> {agentId}</p>
+          <p>
+            <strong>Agent-ID:</strong> {agentId}
+          </p>
         </div>
       )}
 
