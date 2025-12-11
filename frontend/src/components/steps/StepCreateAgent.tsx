@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { apiPost } from "../../api/client";
+import type { KnowledgeBase } from "../../types/knowledgeBase";
 
 interface StepCreateAgentProps {
   prompt: string;
   agentName: string;
   knowledgeBaseJsonFilePath: string;
+  knowledgeBase: KnowledgeBase;
 }
 
 interface CreateAgentResponse {
@@ -24,6 +26,7 @@ export function StepCreateAgent({
   prompt,
   agentName,
   knowledgeBaseJsonFilePath,
+  knowledgeBase,
 }: StepCreateAgentProps) {
   const [loading, setLoading] = useState(false);
   const [agentId, setAgentId] = useState<string | null>(null);
@@ -41,6 +44,7 @@ export function StepCreateAgent({
         name: agentName,
         prompt,
         knowledgeBaseTempFilePath: knowledgeBaseJsonFilePath,
+        knowledgeBase,
       });
 
       const id = response.agent?.agentId ?? null;

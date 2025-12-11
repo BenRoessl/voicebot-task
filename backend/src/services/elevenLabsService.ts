@@ -1,5 +1,6 @@
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { env } from "../config/env";
+import { language } from "@elevenlabs/elevenlabs-js/api/resources/dubbing/resources/resource";
 
 const client = new ElevenLabsClient({
   apiKey: env.elevenLabsApiKey,
@@ -21,12 +22,16 @@ export async function createAgentWithSDK(
     conversationConfig: {
       agent: {
         firstMessage: "Hallo! Wie kann ich helfen?",
+        language: "de",
         prompt: {
           prompt,
-          llm: "gpt-4-turbo",
+          llm: "gpt-5.1",
           temperature: 0.5,
           knowledgeBase,
         },
+      },
+      tts: {
+        modelId: "eleven_turbo_v2_5",
       },
     },
   });

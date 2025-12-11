@@ -17,11 +17,10 @@ export function StepCrawlResult({
   onCrawlComplete,
   onUpdateKnowledgeBase,
   onNext,
-  onBack,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [newUrl, setNewUrl] = useState("");
+  // const [newUrl, setNewUrl] = useState("");
 
   async function handleCrawl() {
     try {
@@ -52,25 +51,6 @@ export function StepCrawlResult({
     };
 
     onUpdateKnowledgeBase(updatedKb);
-  }
-
-  function handleAddUrl() {
-    if (!knowledgeBase) return;
-    const trimmed = newUrl.trim();
-    if (!trimmed) return;
-
-    const newPage = {
-      url: trimmed,
-      title: trimmed,
-    } as KnowledgeBase["pages"][number];
-
-    const updatedKb: KnowledgeBase = {
-      ...knowledgeBase,
-      pages: [...knowledgeBase.pages, newPage],
-    };
-
-    onUpdateKnowledgeBase(updatedKb);
-    setNewUrl("");
   }
 
   const canContinue = !!knowledgeBase && knowledgeBase.pages.length > 0;
@@ -120,41 +100,14 @@ export function StepCrawlResult({
             ))}
           </ul>
 
-          <div className="wizard-step-content">
-            <h4 className="wizard-content-title" style={{ fontSize: "0.95rem" }}>
-              Weitere URL hinzufügen
-            </h4>
-            <input
-              type="text"
-              className="input"
-              placeholder="https://weitere-seite.de"
-              value={newUrl}
-              onChange={(event) => setNewUrl(event.target.value)}
-            />
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleAddUrl}
-              disabled={!newUrl.trim()}
-            >
-              URL hinzufügen
-            </button>
-          </div>
-
-          <div className="wizard-step-actions">
-            <button type="button" className="btn btn-secondary" onClick={onBack}>
-              Zurück
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={onNext}
-              disabled={!canContinue}
-            >
-              Weiter
-            </button>
-          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={onNext}
+            disabled={!canContinue}
+          >
+            Weiter
+          </button>
         </>
       )}
     </div>
