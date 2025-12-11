@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { KnowledgeBase } from "../types/knowledgeBase";
+import type { KnowledgeBase } from "../types/knowledgeBase";
 import { buildSystemPrompt } from "../services/promptService";
 
 export const promptRouter = Router();
@@ -7,8 +7,17 @@ export const promptRouter = Router();
 promptRouter.post("/", async (req, res) => {
   const { knowledgeBase } = req.body as { knowledgeBase?: KnowledgeBase };
 
+  // Basic validation
   if (!knowledgeBase) {
-    return res.status(400).json({ error: "Missing 'knowledgeBase' in request body." });
+    return res.status(400).json({
+      error: "Missing 'knowledgeBase' in request body.",
+    });
+  }
+
+  if (!knowledgeBase.sourceUrl || !Array.isArray(knowledgeBase.pages)) {
+    return res.status(422).json({
+      error: "Invalid knowledge base structure.",
+    });
   }
 
   try {
@@ -18,6 +27,8 @@ promptRouter.post("/", async (req, res) => {
       prompt: result.prompt,
     });
   } catch (error) {
+    console.error("Failed to build system prompt:", error);
+
     return res.status(500).json({
       error: "Failed to build system prompt.",
       details: error instanceof Error ? error.message : "Unknown error",

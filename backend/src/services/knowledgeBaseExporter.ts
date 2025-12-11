@@ -100,3 +100,20 @@ export async function writeKnowledgeBaseJsonFile(kb: KnowledgeBase): Promise<str
   await fs.writeFile(filePath, JSON.stringify(kb, null, 2), "utf8");
   return filePath;
 }
+
+export async function overwriteKnowledgeBaseJsonFile(
+  filePath: string,
+  knowledgeBase: KnowledgeBase
+): Promise<void> {
+  if (!filePath) {
+    throw new Error("overwriteKnowledgeBaseJsonFile: filePath is missing");
+  }
+
+  const resolved = path.resolve(filePath);
+  if (!resolved.includes("temp") && !resolved.includes("tmp")) {
+    throw new Error("Refusing to overwrite KB JSON file outside temp directory.");
+  }
+
+  const json = JSON.stringify(knowledgeBase, null, 2);
+  await fs.writeFile(resolved, json, "utf-8");
+}

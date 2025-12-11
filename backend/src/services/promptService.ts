@@ -7,77 +7,72 @@ export interface PromptBuildResult {
 export function buildSystemPrompt(knowledgeBase: KnowledgeBase): PromptBuildResult {
   const parts: string[] = [];
 
+  // 1) High-level role
   parts.push(
-    "You are a voice assistant for a business. Answer questions based only on the provided business information. If something is not covered, say that you do not know the answer and suggest contacting the business directly."
+    "You are a voice assistant for a business. Your job is to answer questions based only on the business information contained in the provided external knowledge base. Do not invent or assume any details beyond that data."
   );
 
-  parts.push(`Source website: ${knowledgeBase.sourceUrl}`);
+  // 2) Source disclaimer (not to be spoken)
+  parts.push(
+    `Your knowledge comes from a structured extraction of the website ${knowledgeBase.sourceUrl}. Only use the information from the knowledge base, not general world knowledge.`
+  );
+
+  // 3) Tone-of-voice and communication rules
+  parts.push(
+    "Match the communication style of the business whenever possible: this includes the level of formality (e.g., 'du' vs. 'Sie'), whether the business speaks in singular ('ich') or plural ('wir'), and the general tone used on the website. If unclear, default to a friendly and professional tone matching the user's language."
+  );
+
+  // 4) Core behavioral rules
+  parts.push(
+    [
+      "General guidelines:",
+      "- Be clear, concise, and helpful.",
+      "- Never provide information that is not supported by the knowledge base.",
+      "- If a user asks for something that is not covered, say that you do not know the answer and recommend contacting the business directly.",
+      "- If the question is unrelated to the business, politely redirect to relevant topics only.",
+      "- Answer in the same language as the user unless the language is ambiguous; if ambiguous, respond in German.",
+    ].join("\n")
+  );
+
+  // 5) Optional: Describe what types of data the KB contains
+  const kbInfo: string[] = [];
+  const kbUsage: string[] = [];
 
   if (knowledgeBase.contact) {
-    const contactLines: string[] = [];
-
-    if (knowledgeBase.contact.nameOrCompany) {
-      contactLines.push(`Name: ${knowledgeBase.contact.nameOrCompany}`);
-    }
-    if (
-      knowledgeBase.contact.streetAddress ||
-      knowledgeBase.contact.postalCode ||
-      knowledgeBase.contact.city
-    ) {
-      const addressParts: string[] = [];
-      if (knowledgeBase.contact.streetAddress)
-        addressParts.push(knowledgeBase.contact.streetAddress);
-      if (knowledgeBase.contact.postalCode) addressParts.push(knowledgeBase.contact.postalCode);
-      if (knowledgeBase.contact.city) addressParts.push(knowledgeBase.contact.city);
-      contactLines.push(`Address: ${addressParts.join(", ")}`);
-    }
-    if (knowledgeBase.contact.phone) {
-      contactLines.push(`Phone: ${knowledgeBase.contact.phone}`);
-    }
-    if (knowledgeBase.contact.email) {
-      contactLines.push(`Email: ${knowledgeBase.contact.email}`);
-    }
-    if (knowledgeBase.contact.website) {
-      contactLines.push(`Website: ${knowledgeBase.contact.website}`);
-    }
-
-    if (contactLines.length > 0) {
-      parts.push(["Business contact information:", ...contactLines].join("\n"));
-    }
+    kbInfo.push("- Contact information (address, email, phone, etc.)");
+    kbUsage.push("- If the user asks about contact information, use the contact object.");
   }
 
-  if (knowledgeBase.openingHours && knowledgeBase.openingHours.length > 0) {
-    const lines = knowledgeBase.openingHours.map(
-      (entry) => `${entry.day}: ${entry.opens} - ${entry.closes}`
+  if (knowledgeBase.openingHours?.length) {
+    kbInfo.push("- Opening hours for each weekday");
+    kbUsage.push("- If the user asks about opening hours, use the openingHours entries.");
+  }
+
+  if (knowledgeBase.services?.length) {
+    kbInfo.push("- A list of services or offerings provided by the business");
+    kbUsage.push("- If the user asks about services or offerings, use the services list.");
+  }
+
+  if (knowledgeBase.pages?.length) {
+    kbInfo.push("- Structured pages with headings and content sections");
+    kbUsage.push(
+      "- If the user asks general informational questions, use the most relevant page sections to answer."
     );
-
-    parts.push(["Opening hours:", ...lines].join("\n"));
   }
 
-  if (knowledgeBase.services && knowledgeBase.services.length > 0) {
-    const lines = knowledgeBase.services.map((service, index) => {
-      if (service.description) {
-        return `${index + 1}. ${service.name} - ${service.description}`;
-      }
-      return `${index + 1}. ${service.name}`;
-    });
-
-    parts.push(["Services and products:", ...lines].join("\n"));
+  if (kbInfo.length > 0) {
+    parts.push(["The knowledge base contains:", ...kbInfo].join("\n"));
   }
 
-  if (knowledgeBase.rawTextConcat) {
-    parts.push("Additional business information (unstructured text):");
-    parts.push(knowledgeBase.rawTextConcat);
+  if (kbUsage.length > 0) {
+    parts.push(["How to use this information:", ...kbUsage].join("\n"));
   }
 
-  parts.push("Guidelines:");
-  parts.push("- Always be concise and clear.");
-  parts.push("- Do not invent details that are not supported by the provided information.");
+  // 6) Final behavioral instruction
   parts.push(
-    "- If the user asks for something outside the scope of the business, explain that you are focused on this specific business only."
+    "When answering, always choose the most relevant information from the knowledge base and avoid referencing internal structure (such as section names, JSON keys, or metadata). Focus on providing the clearest and most helpful natural response possible."
   );
 
   const prompt = parts.join("\n\n");
-
   return { prompt };
 }

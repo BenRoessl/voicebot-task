@@ -48,8 +48,6 @@ crawlRouter.post("/", async (req, res) => {
 
     const extraction = extractFromCrawledPages(mergedPages);
     const knowledgeBase = buildKnowledgeBase(normalizedInputUrl, extraction);
-
-    // NEW: JSON speichern
     const knowledgeBaseJsonFilePath = await writeKnowledgeBaseJsonFile(knowledgeBase);
 
     return res.json({

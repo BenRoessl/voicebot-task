@@ -57,7 +57,6 @@ export function Wizard() {
 
   const currentStep = STEPS.find((s) => s.number === step) ?? STEPS[0];
 
-  // Einfacher, automatisch generierter Name für den Agenten
   const agentName = url ? `Agent für ${url}` : "Voicebot Agent";
 
   return (
@@ -119,12 +118,13 @@ export function Wizard() {
           />
         )}
 
-        {step === 3 && knowledgeBase && (
+        {step === 3 && knowledgeBase && knowledgeBaseJsonFilePath && (
           <StepPrompt
             knowledgeBase={knowledgeBase}
             prompt={systemPrompt}
             onChangePrompt={setSystemPrompt}
             onNext={goToNextStep}
+            knowledgeBaseJsonFilePath={knowledgeBaseJsonFilePath}
           />
         )}
 
@@ -133,6 +133,7 @@ export function Wizard() {
             prompt={systemPrompt}
             agentName={agentName}
             knowledgeBaseJsonFilePath={knowledgeBaseJsonFilePath}
+            knowledgeBase={knowledgeBase}
           />
         )}
       </section>

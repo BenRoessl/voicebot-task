@@ -4,6 +4,7 @@ import { apiPost } from "../../api/client";
 
 interface StepPromptProps {
   knowledgeBase: KnowledgeBase;
+  knowledgeBaseJsonFilePath: string;
   prompt: string;
   onChangePrompt: (value: string) => void;
   onNext: () => void;
