@@ -28,11 +28,13 @@ export function StepCreateAgent({
   const [loading, setLoading] = useState(false);
   const [agentId, setAgentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function handleCreate() {
     setLoading(true);
     setError(null);
     setAgentId(null);
+    setCopied(false);
 
     try {
       const response = await apiPost<CreateAgentResponse>("/api/agents", {
@@ -50,40 +52,71 @@ export function StepCreateAgent({
 
       setAgentId(id);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error";
+      const message =
+        err instanceof Error ? err.message : "Unbekannter Fehler bei der Agent-Erstellung.";
       setError(message);
     } finally {
       setLoading(false);
     }
   }
 
+  async function handleCopyId() {
+    if (!agentId) return;
+    try {
+      await navigator.clipboard.writeText(agentId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
+
   return (
-    <div>
-      <h2>Schritt 4: Agent-Erstellung</h2>
-      <p>
-        Knowledge Base und Prompt werden nun an ElevenLabs geschickt, um einen Voice-Agent
-        anzulegen.
+    <div className="wizard-step-content">
+      <h2 className="wizard-content-title">Schritt 4: Agent bei ElevenLabs erstellen</h2>
+      <p className="wizard-content-description">
+        Im letzten Schritt werden Knowledge Base und System-Prompt an ElevenLabs übertragen, um
+        einen Voice-Agenten anzulegen. Anschließend erhältst du die Agent-ID, die du für weitere
+        Integrationen verwenden kannst.
       </p>
 
       {!agentId && (
-        <button onClick={handleCreate} disabled={loading}>
-          {loading ? "Agent wird erstellt…" : "Agent jetzt erstellen"}
+        <button type="button" className="btn btn-primary" onClick={handleCreate} disabled={loading}>
+          {loading ? "Agent wird erstellt …" : "Agent jetzt erstellen"}
         </button>
       )}
 
-      {agentId && (
-        <div style={{ marginTop: "1rem" }}>
-          <p>Agent wurde erfolgreich erstellt.</p>
-          <p>
-            <strong>Agent-ID:</strong> {agentId}
-          </p>
-        </div>
-      )}
+      {error && <p className="wizard-error">Agent konnte nicht erstellt werden: {error}</p>}
 
-      {error && (
-        <p style={{ color: "red", marginTop: "1rem" }}>
-          Agent konnte nicht erstellt werden: {error}
-        </p>
+      {agentId && (
+        <div className="wizard-success">
+          <p>Der Agent wurde erfolgreich erstellt.</p>
+
+          <div className="agent-id-row">
+            <span className="agent-id-label">Agent-ID:</span>
+            <span className="agent-id-value">{agentId}</span>
+
+            <button type="button" className="btn btn-secondary" onClick={handleCopyId}>
+              {copied ? "Kopiert" : "ID kopieren"}
+            </button>
+          </div>
+
+          <p className="wizard-hint">
+            Du kannst diese Agent-ID später nutzen, um den Voicebot zu integrieren oder zu
+            verwalten.
+          </p>
+
+          {/* Neuer Button */}
+          <div style={{ marginTop: "1rem" }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => window.location.reload()}
+            >
+              Neuen Agenten erstellen
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

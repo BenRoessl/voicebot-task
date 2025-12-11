@@ -15,27 +15,22 @@ export function StepUrl({ url, onChangeUrl, onNext }: Props) {
   }
 
   return (
-    <div style={{ marginTop: "1.5rem" }}>
-      <h2>Step 1: Enter website URL</h2>
-      <p>
-        Please provide the URL of the website that should be used to prepare the voice assistant.
+    <div className="wizard-step-content">
+      <h2 className="wizard-content-title">Schritt 1: Website-URL eingeben</h2>
+      <p className="wizard-content-description">
+        Bitte gib die URL der Website ein, aus der der Voicebot später die Inhalte bezieht.
       </p>
 
       <input
         type="text"
-        placeholder="https://example.com"
+        className="input"
+        placeholder="https://beispielseite.de"
         value={localUrl}
         onChange={(event) => setLocalUrl(event.target.value)}
-        style={{
-          width: "100%",
-          padding: "0.5rem",
-          marginTop: "1rem",
-          boxSizing: "border-box",
-        }}
       />
 
-      <button style={{ marginTop: "1rem" }} onClick={handleNext} disabled={!localUrl.trim()}>
-        Continue
+      <button className="btn btn-primary" onClick={handleNext} disabled={!localUrl.trim()}>
+        Weiter
       </button>
     </div>
   );
