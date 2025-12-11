@@ -37,27 +37,27 @@ function detectPageType(url: string, sourceUrl: string): KnowledgeBasePage["type
 }
 
 export function buildKnowledgeBase(sourceUrl: string, extraction: ExtractionResult): KnowledgeBase {
-  const pages: KnowledgeBasePage[] = extraction.pages.map((p) => {
-    const type = detectPageType(p.url, sourceUrl);
-    const content = (p.fullText ?? "").trim();
+  const pages: KnowledgeBasePage[] = extraction.pages.map((page) => {
+    const type = detectPageType(page.url, sourceUrl);
+    const content = (page.fullText ?? "").trim();
 
     const sections =
       content.length > 0
         ? [
             {
-              heading: p.title,
+              heading: page.title,
               content,
             },
           ]
         : [];
 
     return {
-      url: p.url,
-      title: p.title,
+      url: page.url,
+      title: page.title,
       type,
       sections,
       // Optional teaser; can be used in UI lists etc.
-      mainTextSnippet: p.preview,
+      mainTextSnippet: page.preview,
     };
   });
 
@@ -73,17 +73,20 @@ export function buildKnowledgeBase(sourceUrl: string, extraction: ExtractionResu
       }
     : null;
 
-  const openingHours: KnowledgeBaseOpeningHoursEntry[] = extraction.openingHours.map((oh) => ({
-    day: oh.day,
-    opens: oh.opens,
-    closes: oh.closes,
-    // Try to keep a raw representation if available, otherwise fall back to a simple combined string
-    raw: (oh as any).raw ?? `${oh.day} ${oh.opens}-${oh.closes}`,
-  }));
+  const openingHours: KnowledgeBaseOpeningHoursEntry[] = extraction.openingHours.map(
+    (openingHour) => ({
+      day: openingHour.day,
+      opens: openingHour.opens,
+      closes: openingHour.closes,
+      // Try to keep a raw representation if available, otherwise fall back to a simple combined string
+      raw:
+        (openingHour as any).raw ?? `${openingHour.day} ${openingHour.opens}-${openingHour.closes}`,
+    })
+  );
 
-  const services: KnowledgeBaseServiceItem[] = extraction.services.map((s) => ({
-    name: s.name,
-    description: s.description,
+  const services: KnowledgeBaseServiceItem[] = extraction.services.map((service) => ({
+    name: service.name,
+    description: service.description,
   }));
 
   return {

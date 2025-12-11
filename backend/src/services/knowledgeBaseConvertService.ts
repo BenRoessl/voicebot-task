@@ -2,11 +2,11 @@ import fs from "fs/promises";
 import path from "path";
 
 export async function convertKnowledgeJsonToTxt(jsonPath: string) {
-  // 1) JSON einlesen
+  // 1) Read JSON
   const raw = await fs.readFile(jsonPath, "utf-8");
   const data = JSON.parse(raw);
 
-  // 2) TXT-Inhalt erzeugen
+  // 2) Generate TXT content
   let text = "";
   text += `Source URL: ${data.sourceUrl}\n`;
   text += `Generated At: ${data.generatedAt}\n\n`;
@@ -54,7 +54,7 @@ export async function convertKnowledgeJsonToTxt(jsonPath: string) {
     }
   }
 
-  // 3) TXT-Datei erzeugen
+  // 3) Create TXT file
   const dir = path.dirname(jsonPath);
   const txtPath = path.join(dir, path.basename(jsonPath).replace(".json", ".txt"));
 

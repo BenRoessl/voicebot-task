@@ -43,7 +43,7 @@ export function normalizeText(txt: string): string {
 export function sanitizeHtml(html: string): cheerio.CheerioAPI {
   const $ = cheerio.load(html);
 
-  for (const sel of BLOCK_SELECTORS) $(sel).remove();
+  for (const selector of BLOCK_SELECTORS) $(selector).remove();
 
   $(
     "[hidden], [aria-hidden='true'], [style*='display:none'], [style*='visibility:hidden']"
@@ -61,8 +61,8 @@ export function extractReadableText($: cheerio.CheerioAPI): string[] {
 
   const CONTENT_SELECTORS = "h1, h2, h3, h4, p, li, a";
 
-  roots.find(CONTENT_SELECTORS).each((_i, el) => {
-    const raw = $(el).text();
+  roots.find(CONTENT_SELECTORS).each((_i, element) => {
+    const raw = $(element).text();
     const line = normalizeText(raw);
     if (!line) return;
     if (line.length < 3) return;
@@ -70,7 +70,7 @@ export function extractReadableText($: cheerio.CheerioAPI): string[] {
     if (looksLikeCode(line)) return;
     if (looksLikeCookieOrConsent(line)) return;
 
-    if (el.tagName.toLowerCase() === "a") {
+    if (element.tagName.toLowerCase() === "a") {
       const short = line.toLowerCase();
       if (short.length < 8) return;
       if (/^(mehr|mehr erfahren|weiter|jetzt kaufen|details)$/i.test(line)) return;

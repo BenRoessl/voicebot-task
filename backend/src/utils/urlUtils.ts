@@ -3,8 +3,8 @@ const MAX_PATH_SEGMENTS = 4;
 // Limits crawl scope by cutting off deeply nested paths.
 export function isUrlTooDeep(url: string, maxDepth: number): boolean {
   try {
-    const parsed = new URL(url);
-    const depth = countPathSegments(parsed.pathname);
+    const parsedUrl = new URL(url);
+    const depth = countPathSegments(parsedUrl.pathname);
     return depth > maxDepth;
   } catch {
     return false;

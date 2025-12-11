@@ -60,12 +60,6 @@ export function knowledgeBaseToPlainText(kb: KnowledgeBase): string {
     });
   });
 
-  // Optional raw text
-  if (kb.rawTextConcat) {
-    lines.push("## Rohtext (Concat)");
-    lines.push(kb.rawTextConcat);
-  }
-
   return lines.join("\n");
 }
 
@@ -87,7 +81,7 @@ export async function writeKnowledgeBaseTempFile(kb: KnowledgeBase): Promise<str
   return filePath;
 }
 
-// write KnowledgeBase as JSON file into project folder
+// write KnowledgeBase as JSON file into tmp folder
 export async function writeKnowledgeBaseJsonFile(kb: KnowledgeBase): Promise<string> {
   const baseDir = path.join(process.cwd(), "tmp", "knowledge-base-json");
 

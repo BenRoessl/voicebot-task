@@ -157,12 +157,12 @@ function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation
   const services: ServiceEntry[] = [];
 
   for (const page of pages) {
-    const $ = sanitizeHtml(page.html);
-    const bodyText = $("body").text();
+    const sanitizedHtml = sanitizeHtml(page.html);
+    const bodyText = sanitizedHtml("body").text();
 
     // E-mail: prefer mailto links, fallback to regex
     if (!aggregatedContact.email) {
-      const mailHref = $("a[href^='mailto:']").first().attr("href");
+      const mailHref = sanitizedHtml("a[href^='mailto:']").first().attr("href");
       if (mailHref) {
         const value = mailHref.replace(/^mailto:/i, "").trim();
         aggregatedContact.email = value || undefined;
@@ -176,7 +176,7 @@ function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation
 
     // Phone: prefer tel links, fallback to loose pattern, but ignore garbage like "0"
     if (!aggregatedContact.phone) {
-      const telHref = $("a[href^='tel:']").first().attr("href");
+      const telHref = sanitizedHtml("a[href^='tel:']").first().attr("href");
       if (telHref) {
         const raw = telHref.replace(/^tel:/i, "").trim();
         const digits = raw.replace(/[^\d+]/g, "");
@@ -193,8 +193,8 @@ function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation
 
     // Website: if nothing found yet, use first absolute link;
     if (!aggregatedContact.website) {
-      const sameHostLink = $("a[href]")
-        .map((_i, el) => $(el).attr("href"))
+      const sameHostLink = sanitizedHtml("a[href]")
+        .map((_i, el) => sanitizedHtml(el).attr("href"))
         .get()
         .find((href) => href && href.startsWith("http"));
       if (sameHostLink) {
@@ -222,14 +222,14 @@ function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation
         const zip = zipMatch[0];
         aggregatedContact.postalCode = zip;
 
-        // City: part after ZIP, bis zum nächsten Komma
+        // City: part after ZIP
         const afterZip = line.slice(line.indexOf(zip) + zip.length).trim();
         const cityPart = afterZip.split(",")[0].trim();
         if (cityPart) {
           aggregatedContact.city = cityPart;
         }
 
-        // Street: vorherige sinnvolle Zeile suchen
+        // Street
         for (let j = i - 1; j >= 0; j--) {
           const prev = lines[j];
           if (!prev) continue;
@@ -243,7 +243,7 @@ function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation
         break;
       }
 
-      // Opening hours (new, more strict)
+      // Opening hours
       const opening = extractOpeningHoursFromLines(lines);
       if (opening.length > 0) {
         openingHours.push(...opening);
@@ -251,8 +251,8 @@ function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation
     }
 
     if (!aggregatedContact.nameOrCompany) {
-      const candidate = $("h1, h2")
-        .map((_i, el) => $(el).text())
+      const candidate = sanitizedHtml("h1, h2")
+        .map((_i, el) => sanitizedHtml(el).text())
         .get()
         .map((t) => normalizeText(t))
         .find((t) => looksLikeCompanyName(t));
@@ -288,7 +288,6 @@ function extractRawTextFromPages(pages: CrawledPage[]): RawTextResult {
 
     const title = normalizeText($("title").first().text() || "");
 
-    // 2) PREVIEW: erster sinnvoller Satz/Bereich (wie gehabt)
     let previewStartIndex = lines.findIndex((line) => {
       const trimmed = line.trim();
       if (!trimmed) return false;
@@ -301,19 +300,19 @@ function extractRawTextFromPages(pages: CrawledPage[]): RawTextResult {
       previewStartIndex = 0;
     }
 
-    // preview = kleine Vorschau (6 Zeilen)
+    // preview = small preview (6 lines)
     const previewLines = lines.slice(previewStartIndex, previewStartIndex + 6);
     let preview = previewLines.join(" ");
     preview = preview.replace(/\s+/g, " ").trim();
 
-    // full text soll an der gleichen Stelle beginnen wie preview
+    // full text should start at the same position as the preview
     const fullTextLines = lines.slice(previewStartIndex);
 
-    // kompletter Text ohne Sonderzeichen / neue Zeilen
+    // complete text without special characters / new lines
     let fullText = fullTextLines.join(" ");
     fullText = fullText.replace(/\s+/g, " ").trim();
 
-    // 3) Ergebnis speichern
+    // Save the result
     pageSummaries.push({
       url: page.url,
       title: title || undefined,
