@@ -25,14 +25,16 @@ Der Setup-Prozess besteht aus vier Schritten:
    Der Nutzer gibt die URL der Website an, die als Wissensquelle dienen soll.
 
 2. **Crawling**  
-   Das Backend crawlt die Startseite und verlinkte Unterseiten (Tiefe 1) und extrahiert Textinhalte.
+   Das Backend crawlt die Startseite und verlinkte Unterseiten (Tiefe 2) und extrahiert Textinhalte.
 
 3. **Prompt-Konfiguration**  
-   Der Nutzer definiert einen System-Prompt zur Steuerung des Agentenverhaltens.
+   Auf Basis der gecrawlten Inhalte wird automatisch ein initialer System-Prompt erzeugt.
+   Der Nutzer kann diesen Prompt in diesem Schritt prüfen und bei Bedarf anpassen,
+   um das Verhalten des Voice-Agenten gezielt zu steuern.
 
 4. **Agent-Erstellung**  
    Knowledge Base und Prompt werden genutzt, um einen Agenten über die ElevenLabs API zu erstellen.
-   Die Agent-ID wird im Frontend angezeigt.
+   Die Agent-ID wird im Frontend angezeigt und kann dort in die Zwischenablage kopiert werden.
 
 ---
 
@@ -63,7 +65,7 @@ Die Knowledge Base wird dateibasiert verarbeitet:
 
 ---
 
-## Designentscheidungen / Mini Defense
+## Designentscheidungen
 
 - **Begrenzte Crawltiefe**  
   Tiefe 2 sorgt für planbare Laufzeiten und überschaubaren Umfang.
