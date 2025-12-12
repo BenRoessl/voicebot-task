@@ -20,7 +20,6 @@ export function StepCrawlResult({
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // const [newUrl, setNewUrl] = useState("");
 
   async function handleCrawl() {
     try {

@@ -46,20 +46,10 @@ export interface KnowledgeBaseServiceItem {
 
 // Root knowledge base structure built from the crawled website
 export interface KnowledgeBase {
-  // URL entered by the user / crawl root
   sourceUrl: string;
-
-  // Time when this knowledge base snapshot was generated
   generatedAt: string;
-
-  // All relevant pages that were crawled and structured
   pages: KnowledgeBasePage[];
-
-  // Extracted business-relevant entities
   contact?: KnowledgeBaseContact | null;
   openingHours?: KnowledgeBaseOpeningHoursEntry[];
   services?: KnowledgeBaseServiceItem[];
-
-  // Optional concatenation of all raw text content for debugging or export
-  rawTextConcat?: string;
 }

@@ -110,7 +110,7 @@ export function StepCreateAgent({
             verwalten.
           </p>
 
-          {/* Neuer Button */}
+          {/* Restart Button */}
           <div style={{ marginTop: "1rem" }}>
             <button
               type="button"

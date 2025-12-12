@@ -5,7 +5,6 @@ export interface KnowledgeBasePage {
 }
 
 export interface KnowledgeBaseContact {
-  nameOrCompany?: string;
   email?: string;
   phone?: string;
   streetAddress?: string;
@@ -33,5 +32,4 @@ export interface KnowledgeBase {
   contact?: KnowledgeBaseContact;
   openingHours?: KnowledgeBaseOpeningHoursEntry[];
   services?: KnowledgeBaseServiceItem[];
-  rawTextConcat?: string;
 }

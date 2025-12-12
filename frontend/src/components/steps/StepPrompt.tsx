@@ -37,21 +37,17 @@ export function StepPrompt({ knowledgeBase, prompt, onChangePrompt, onNext }: St
     }
   }
 
-  // Prompt automatisch laden, sobald der Schritt geöffnet wird (falls noch keiner vorhanden ist)
   useEffect(() => {
     if (!prompt) {
       void handleGenerate();
     }
-    // Wir wollen handleGenerate hier bewusst nicht als Dependency, um keine Endlosschleife zu erzeugen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [knowledgeBase, prompt]);
 
   function handleSave() {
     if (!prompt) return;
-    // Frontend-Only: wir merken uns nur, dass "gespeichert" wurde.
-    // Später kann hier ein API-Call eingebaut werden, der den Prompt im Backend aktualisiert.
     setSaveMessage(
-      "Aktuelle Version des Prompts wurde übernommen. (Speichern im Backend folgt später.)"
+      "Aktuelle Version des Prompts wurde übernommen. Du kannst den Prompt später im Agenten-Management-Bereich jederzeit anpassen und verwalten."
     );
   }
 

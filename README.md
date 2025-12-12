@@ -11,6 +11,7 @@ Der Fokus liegt auf einem klaren, nachvollziehbaren technischen Ablauf.
 Dieses Repository enthält sowohl Frontend als auch Backend.
 
 Die Anwendung führt den Nutzer Schritt für Schritt durch einen Wizard, der:
+
 - eine Website crawlt,
 - daraus eine Knowledge Base erstellt,
 - und einen Voice-Agent über die ElevenLabs API anlegt.
@@ -39,11 +40,13 @@ Der Setup-Prozess besteht aus vier Schritten:
 ## Architektur
 
 ### Frontend
+
 - Wizard-basierte Benutzeroberfläche
 - Anzeige von Status und Ergebnissen
 - Kommunikation mit dem Backend über HTTP
 
 ### Backend
+
 - Website-Crawling und Textextraktion
 - Aufbereitung der Inhalte zu bereinigtem Text
 - Temporäre Speicherung der Knowledge Base als Datei
