@@ -11,12 +11,6 @@ export interface ContactInfo {
   website?: string;
 }
 
-export interface OpeningHoursEntry {
-  day: string;
-  opens: string;
-  closes: string;
-}
-
 export interface ServiceEntry {
   name: string;
   description?: string;
@@ -32,7 +26,7 @@ export interface ExtractionPageSummary {
 export interface ExtractionResult {
   pages: ExtractionPageSummary[];
   contact: ContactInfo | null;
-  openingHours: OpeningHoursEntry[];
+  openingHours: [];
   services: ServiceEntry[];
 }
 
@@ -44,7 +38,7 @@ export function extractFromCrawledPages(pages: CrawledPage[]): ExtractionResult 
   return {
     pages: pageSummaries,
     contact: structured.contact,
-    openingHours: structured.openingHours,
+    openingHours: [],
     services: structured.services,
   };
 }
@@ -53,7 +47,6 @@ export function extractFromCrawledPages(pages: CrawledPage[]): ExtractionResult 
 
 interface StructuredAggregation {
   contact: ContactInfo | null;
-  openingHours: OpeningHoursEntry[];
   services: ServiceEntry[];
 }
 
@@ -108,15 +101,14 @@ function extractPhoneFromText(text: string): string | undefined {
   for (const raw of candidates) {
     const clean = raw.trim();
 
-    if (/^\d{4,6}$/.test(clean)) continue; // 2025 / 123456 / 84051 etc.
-
+    if (/^\d{4,6}$/.test(clean)) continue;
     if (/\d\.\d/.test(clean)) continue;
 
     const looksLikePhone =
-      /^(\+|00)?\d{2,3}/.test(clean) || // +49..., 0049..., 087...
-      /\d{2,}\s*\/\s*\d{2,}/.test(clean) || // 0871/12345
-      /\d{2,}\s*-\s*\d{2,}/.test(clean) || // 0871-12345
-      /\(\d{2,}\)/.test(clean); // (0871)
+      /^(\+|00)?\d{2,3}/.test(clean) ||
+      /\d{2,}\s*\/\s*\d{2,}/.test(clean) ||
+      /\d{2,}\s*-\s*\d{2,}/.test(clean) ||
+      /\(\d{2,}\)/.test(clean);
 
     if (!looksLikePhone) continue;
 
@@ -129,36 +121,67 @@ function extractPhoneFromText(text: string): string | undefined {
   return undefined;
 }
 
-function extractOpeningHoursFromLines(lines: string[]): OpeningHoursEntry[] {
-  const result: OpeningHoursEntry[] = [];
+function looksLikeServiceName(line: string): boolean {
+  if (!line) return false;
+  if (line.length < 4 || line.length > 80) return false;
+  if (/\b\d{1,2}:\d{2}\b/.test(line)) return false;
+  if (/^(kontakt|impressum|datenschutz|sprechzeiten|öffnungszeiten)$/i.test(line)) return false;
+  if (/^(start|home|menü|navigation)$/i.test(line)) return false;
+  if (/https?:\/\//i.test(line)) return false;
+  if (/(datenschutz|impressum|kontakt|startseite|tel\.|fax|©)/i.test(line)) return false;
 
-  for (const line of lines) {
-    // Only reasonably short lines, otherwise it is most likely description text
-    if (line.length > 120) continue;
+  const wordCount = line.split(/\s+/).filter(Boolean).length;
+  if (wordCount > 6) return false;
 
-    const hasDay = /(mo|di|mi|do|fr|sa|so|mon|tue|wed|thu|fri|sat|sun)\b/i.test(line);
-    const hasTime = /\b\d{1,2}:\d{2}\b/.test(line); // 09:00, 8:30 etc.
+  return true;
+}
 
-    if (!hasDay || !hasTime) continue;
+function extractServicesFromLines(lines: string[]): ServiceEntry[] {
+  const services: ServiceEntry[] = [];
+  const seen = new Set<string>();
 
-    result.push({
-      day: line,
-      opens: "",
-      closes: "",
-    });
+  const normalized = lines.map((l) => normalizeText(l)).filter(Boolean);
+
+  const anchorIndex = normalized.findIndex((l) => /\bunsere leistungen\b/i.test(l));
+  if (anchorIndex === -1) return services;
+
+  for (let i = anchorIndex + 1; i < Math.min(anchorIndex + 120, normalized.length); i++) {
+    const name = normalizeText(normalized[i]);
+    if (!looksLikeServiceName(name)) continue;
+
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const next = normalized[i + 1] ? normalizeText(normalized[i + 1]) : "";
+    const description =
+      next && next.length > 25 && next.length < 220 && !looksLikeServiceName(next)
+        ? next
+        : undefined;
+
+    services.push({ name, description });
   }
 
-  return result;
+  return services;
 }
 
 function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation {
   const aggregatedContact: ContactInfo = {};
-  const openingHours: OpeningHoursEntry[] = [];
   const services: ServiceEntry[] = [];
+  const servicesSeen = new Set<string>();
 
   for (const page of pages) {
     const sanitizedHtml = sanitizeHtml(page.html);
     const bodyText = sanitizedHtml("body").text();
+
+    const readableLines = extractReadableText(sanitizedHtml)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    const normalizedLines = bodyText
+      .split("\n")
+      .map((l) => normalizeText(l))
+      .filter(Boolean);
 
     // E-mail: prefer mailto links, fallback to regex
     if (!aggregatedContact.email) {
@@ -191,7 +214,7 @@ function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation
       }
     }
 
-    // Website: if nothing found yet, use first absolute link;
+    // Website: if nothing found yet, use first absolute link
     if (!aggregatedContact.website) {
       const sameHostLink = sanitizedHtml("a[href]")
         .map((_i, el) => sanitizedHtml(el).attr("href"))
@@ -208,13 +231,8 @@ function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation
       !aggregatedContact.city ||
       !aggregatedContact.postalCode
     ) {
-      const lines = bodyText
-        .split("\n")
-        .map((l) => normalizeText(l))
-        .filter(Boolean);
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
+      for (let i = 0; i < normalizedLines.length; i++) {
+        const line = normalizedLines[i];
         const zipMatch = line.match(/\b\d{5}\b/);
         if (!zipMatch) continue;
         if (line.length > 120) continue;
@@ -222,16 +240,14 @@ function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation
         const zip = zipMatch[0];
         aggregatedContact.postalCode = zip;
 
-        // City: part after ZIP
         const afterZip = line.slice(line.indexOf(zip) + zip.length).trim();
         const cityPart = afterZip.split(",")[0].trim();
         if (cityPart) {
           aggregatedContact.city = cityPart;
         }
 
-        // Street
         for (let j = i - 1; j >= 0; j--) {
-          const prev = lines[j];
+          const prev = normalizedLines[j];
           if (!prev) continue;
           if (/impressum|nutzungsbedingungen|agb/i.test(prev)) continue;
           if (prev.length < 5 || prev.length > 120) continue;
@@ -241,12 +257,6 @@ function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation
         }
 
         break;
-      }
-
-      // Opening hours
-      const opening = extractOpeningHoursFromLines(lines);
-      if (opening.length > 0) {
-        openingHours.push(...opening);
       }
     }
 
@@ -261,16 +271,25 @@ function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation
         aggregatedContact.nameOrCompany = candidate;
       }
     }
+
+    // Services (always attempt per page)
+    const pageServices = extractServicesFromLines(readableLines);
+    for (const s of pageServices) {
+      const key = s.name.toLowerCase();
+      if (servicesSeen.has(key)) continue;
+      servicesSeen.add(key);
+      services.push(s);
+    }
   }
 
   const contact = Object.values(aggregatedContact).some((v) => !!v) ? aggregatedContact : null;
 
   return {
     contact,
-    openingHours,
     services,
   };
 }
+
 // ----------------- unstructured text extraction -----------------
 
 interface RawTextResult {
@@ -300,19 +319,15 @@ function extractRawTextFromPages(pages: CrawledPage[]): RawTextResult {
       previewStartIndex = 0;
     }
 
-    // preview = small preview (6 lines)
     const previewLines = lines.slice(previewStartIndex, previewStartIndex + 6);
     let preview = previewLines.join(" ");
     preview = preview.replace(/\s+/g, " ").trim();
 
-    // full text should start at the same position as the preview
     const fullTextLines = lines.slice(previewStartIndex);
 
-    // complete text without special characters / new lines
     let fullText = fullTextLines.join(" ");
     fullText = fullText.replace(/\s+/g, " ").trim();
 
-    // Save the result
     pageSummaries.push({
       url: page.url,
       title: title || undefined,

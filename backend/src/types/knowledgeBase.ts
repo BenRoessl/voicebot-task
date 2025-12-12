@@ -19,13 +19,11 @@ export interface KnowledgeBasePage {
 
 // Represents extracted contact information for the company
 export interface KnowledgeBaseContact {
-  nameOrCompany?: string;
   email?: string;
   phone?: string;
   streetAddress?: string;
   postalCode?: string;
   city?: string;
-  country?: string;
   website?: string;
 }
 

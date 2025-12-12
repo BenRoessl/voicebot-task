@@ -63,26 +63,14 @@ export function buildKnowledgeBase(sourceUrl: string, extraction: ExtractionResu
 
   const contact: KnowledgeBaseContact | null = extraction.contact
     ? {
-        nameOrCompany: extraction.contact.nameOrCompany,
         email: extraction.contact.email,
         phone: extraction.contact.phone,
         streetAddress: extraction.contact.streetAddress,
         postalCode: extraction.contact.postalCode,
         city: extraction.contact.city,
-        website: extraction.contact.website,
+        website: sourceUrl,
       }
     : null;
-
-  const openingHours: KnowledgeBaseOpeningHoursEntry[] = extraction.openingHours.map(
-    (openingHour) => ({
-      day: openingHour.day,
-      opens: openingHour.opens,
-      closes: openingHour.closes,
-      // Try to keep a raw representation if available, otherwise fall back to a simple combined string
-      raw:
-        (openingHour as any).raw ?? `${openingHour.day} ${openingHour.opens}-${openingHour.closes}`,
-    })
-  );
 
   const services: KnowledgeBaseServiceItem[] = extraction.services.map((service) => ({
     name: service.name,
@@ -94,7 +82,6 @@ export function buildKnowledgeBase(sourceUrl: string, extraction: ExtractionResu
     generatedAt: new Date().toISOString(),
     pages,
     contact,
-    openingHours,
     services,
   };
 }

@@ -10,7 +10,6 @@ export interface KnowledgeBaseContact {
   streetAddress?: string;
   postalCode?: string;
   city?: string;
-  country?: string;
   website?: string;
 }
 

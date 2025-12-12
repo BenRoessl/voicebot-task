@@ -43,11 +43,6 @@ export function buildSystemPrompt(knowledgeBase: KnowledgeBase): PromptBuildResu
     kbUsage.push("- If the user asks about contact information, use the contact object.");
   }
 
-  if (knowledgeBase.openingHours?.length) {
-    kbInfo.push("- Opening hours for each weekday");
-    kbUsage.push("- If the user asks about opening hours, use the openingHours entries.");
-  }
-
   if (knowledgeBase.services?.length) {
     kbInfo.push("- A list of services or offerings provided by the business");
     kbUsage.push("- If the user asks about services or offerings, use the services list.");
