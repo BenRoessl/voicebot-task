@@ -47,8 +47,9 @@ elevenLabsAgentRouter.post("/", async (req, res) => {
     // 3) Create the agent in ElevenLabs using the uploaded Knowledge Base
     const agent = await createAgentWithSDK(name, prompt, [kbEntry]);
 
+    // 4) Optional cleanup: remove the temporary TXT file
     const baseDir = path.join(process.cwd(), "tmp");
-    // 4) Optional cleanup: remove the temporary TXT file (disabled for now)
+
     try {
       await fs.rm(baseDir, { recursive: true, force: true });
     } catch (err) {
@@ -61,6 +62,7 @@ elevenLabsAgentRouter.post("/", async (req, res) => {
     });
   } catch (error) {
     console.error("Failed to create ElevenLabs agent:", error);
+
     return res.status(500).json({
       error: "Failed to create agent",
       details: error instanceof Error ? error.message : "Unknown error",

@@ -2,7 +2,6 @@ import type { CrawledPage } from "./crawlerService";
 import { sanitizeHtml, extractReadableText, normalizeText } from "../utils/textSanitizer";
 
 export interface ContactInfo {
-  nameOrCompany?: string;
   streetAddress?: string;
   postalCode?: string;
   city?: string;
@@ -48,36 +47,6 @@ export function extractFromCrawledPages(pages: CrawledPage[]): ExtractionResult 
 interface StructuredAggregation {
   contact: ContactInfo | null;
   services: ServiceEntry[];
-}
-
-function looksLikeCompanyName(candidate: string): boolean {
-  const value = candidate.trim();
-  const lower = value.toLowerCase();
-
-  if (value.length < 3 || value.length > 80) return false;
-
-  const forbiddenExact = [
-    "unsere bestseller",
-    "bestseller",
-    "kontakt",
-    "impressum",
-    "jobs",
-    "karriere",
-    "newsletter",
-    "standorte",
-    "standort",
-    "faq",
-    "häufige fragen",
-    "impressum & datenschutz",
-    "datenschutz",
-    "nutzungsbedingungen",
-    "agb",
-    "rechtliche hinweise",
-  ];
-
-  if (forbiddenExact.includes(lower)) return false;
-
-  return true;
 }
 
 function extractEmailFromText(text: string): string | undefined {
@@ -257,18 +226,6 @@ function extractStructuredFromPages(pages: CrawledPage[]): StructuredAggregation
         }
 
         break;
-      }
-    }
-
-    if (!aggregatedContact.nameOrCompany) {
-      const candidate = sanitizedHtml("h1, h2")
-        .map((_i, el) => sanitizedHtml(el).text())
-        .get()
-        .map((t) => normalizeText(t))
-        .find((t) => looksLikeCompanyName(t));
-
-      if (candidate) {
-        aggregatedContact.nameOrCompany = candidate;
       }
     }
 

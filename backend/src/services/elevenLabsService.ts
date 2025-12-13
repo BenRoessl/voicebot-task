@@ -1,6 +1,5 @@
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { env } from "../config/env";
-import { language } from "@elevenlabs/elevenlabs-js/api/resources/dubbing/resources/resource";
 
 const client = new ElevenLabsClient({
   apiKey: env.elevenLabsApiKey,
@@ -26,7 +25,6 @@ export async function createAgentWithSDK(
         prompt: {
           prompt,
           llm: "gpt-5.1",
-          temperature: 0.5,
           knowledgeBase,
         },
       },
