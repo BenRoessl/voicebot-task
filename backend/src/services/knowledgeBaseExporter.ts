@@ -15,7 +15,6 @@ export function knowledgeBaseToPlainText(kb: KnowledgeBase): string {
   // Contact info
   if (kb.contact) {
     lines.push("## Kontakt");
-    if (kb.contact.nameOrCompany) lines.push(`Firma: ${kb.contact.nameOrCompany}`);
     if (kb.contact.streetAddress) lines.push(`Adresse: ${kb.contact.streetAddress}`);
     if (kb.contact.postalCode && kb.contact.city)
       lines.push(`Stadt: ${kb.contact.postalCode} ${kb.contact.city}`);
@@ -53,7 +52,6 @@ export function knowledgeBaseToPlainText(kb: KnowledgeBase): string {
     lines.push("");
 
     page.sections.forEach((section, i) => {
-      lines.push(`--- Abschnitt ${i + 1} ---`);
       if (section.heading) lines.push(`Überschrift: ${section.heading}`);
       lines.push(section.content);
       lines.push("");
@@ -68,7 +66,7 @@ export async function writeKnowledgeBaseTempFile(kb: KnowledgeBase): Promise<str
   const txt = knowledgeBaseToPlainText(kb);
 
   // Base directory inside your backend project
-  const baseDir = path.join(process.cwd(), "tmp", "knowledge-base");
+  const baseDir = path.join(process.cwd(), "tmp");
 
   // Ensure directory exists
   await fs.mkdir(baseDir, { recursive: true });
@@ -83,7 +81,7 @@ export async function writeKnowledgeBaseTempFile(kb: KnowledgeBase): Promise<str
 
 // write KnowledgeBase as JSON file into tmp folder
 export async function writeKnowledgeBaseJsonFile(kb: KnowledgeBase): Promise<string> {
-  const baseDir = path.join(process.cwd(), "tmp", "knowledge-base-json");
+  const baseDir = path.join(process.cwd(), "tmp");
 
   // Ensure directory exists
   await fs.mkdir(baseDir, { recursive: true });
@@ -109,5 +107,6 @@ export async function overwriteKnowledgeBaseJsonFile(
   }
 
   const json = JSON.stringify(knowledgeBase, null, 2);
+
   await fs.writeFile(resolved, json, "utf-8");
 }

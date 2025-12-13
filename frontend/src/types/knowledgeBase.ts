@@ -1,6 +1,13 @@
+export interface KnowledgeBaseSection {
+  heading?: string;
+  content?: string;
+}
+
 export interface KnowledgeBasePage {
   url: string;
   title?: string;
+  type?: "home" | "subpage" | "contact" | "faq" | "unknown";
+  sections?: KnowledgeBaseSection[];
   mainTextSnippet?: string;
 }
 
@@ -27,6 +34,7 @@ export interface KnowledgeBaseServiceItem {
 
 export interface KnowledgeBase {
   sourceUrl: string;
+  generatedAt?: string;
   pages: KnowledgeBasePage[];
   contact?: KnowledgeBaseContact;
   openingHours?: KnowledgeBaseOpeningHoursEntry[];

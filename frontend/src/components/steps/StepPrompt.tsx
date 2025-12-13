@@ -97,7 +97,7 @@ export function StepPrompt({ knowledgeBase, prompt, onChangePrompt, onNext }: St
           onClick={handleContinue}
           disabled={!prompt || loading}
         >
-          Weiter zu Schritt 4
+          Weiter
         </button>
       </div>
     </div>

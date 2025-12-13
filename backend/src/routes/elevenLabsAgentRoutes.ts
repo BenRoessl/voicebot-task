@@ -4,6 +4,7 @@ import { uploadKnowledgeBaseFile } from "../services/elevenLabsKnowledgeService"
 import { convertKnowledgeJsonToTxt } from "../services/knowledgeBaseConvertService";
 import { createAgentWithSDK } from "../services/elevenLabsService";
 import { KnowledgeBase } from "../types/knowledgeBase";
+import path from "path";
 
 export const elevenLabsAgentRouter = Router();
 
@@ -46,10 +47,10 @@ elevenLabsAgentRouter.post("/", async (req, res) => {
     // 3) Create the agent in ElevenLabs using the uploaded Knowledge Base
     const agent = await createAgentWithSDK(name, prompt, [kbEntry]);
 
+    const baseDir = path.join(process.cwd(), "tmp");
     // 4) Optional cleanup: remove the temporary TXT file (disabled for now)
-
     try {
-      await fs.rm(txtPath);
+      await fs.rm(baseDir, { recursive: true, force: true });
     } catch (err) {
       console.error("Failed to delete temp TXT:", err);
     }
