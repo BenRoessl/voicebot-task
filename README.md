@@ -27,6 +27,7 @@ Der Setup-Prozess besteht aus vier Schritten:
 
 2. **Crawling**  
    Das Backend crawlt die Startseite und verlinkte Unterseiten (Tiefe 2) und extrahiert Textinhalte.
+   Der Nutzer kann die Innhalte in diesem Schritt prüfen und bei Bedarf anpassen.
 
 3. **Prompt-Konfiguration**  
    Auf Basis der gecrawlten Inhalte wird automatisch ein initialer System-Prompt erzeugt.
@@ -62,8 +63,9 @@ Frontend und Backend befinden sich im selben Repository.
 
 Die Knowledge Base wird dateibasiert verarbeitet:
 
-- Crawling-Ergebnisse werden in eine Textdatei umgewandelt
+- Crawling-Ergebnisse werden in eine JSON-Datei geschrieben
 - Die Datei wird temporär gespeichert
+- Endergebnisse werden in eine Textdatei umgewandelt
 - Upload zu ElevenLabs erfolgt über eine File-Referenz
 
 ---
@@ -90,7 +92,7 @@ Die Knowledge Base wird dateibasiert verarbeitet:
 ## Setup-Hinweise
 
 1. Abhängigkeiten für Frontend und Backend installieren
-2. Umgebungsvariablen konfigurieren (inkl. ElevenLabs API-Key)
+2. Umgebungsvariablen konfigurieren (inkl. ElevenLabs API-Key). Siehe `.env.example` im Backend
 3. Backend starten (npm run dev:backend)
 4. Frontend starten (npm run dev:frontend)
 
