@@ -51,10 +51,6 @@ export function Wizard() {
     setStep((current) => Math.min(current + 1, STEPS.length));
   }
 
-  function goToPreviousStep() {
-    setStep((current) => Math.max(current - 1, 1));
-  }
-
   const currentStep = STEPS.find((s) => s.number === step) ?? STEPS[0];
 
   const agentName = url ? `Agent für ${url}` : "Voicebot Agent";
@@ -114,7 +110,6 @@ export function Wizard() {
               setKnowledgeBase(updatedKb);
             }}
             onNext={goToNextStep}
-            onBack={goToPreviousStep}
           />
         )}
 
